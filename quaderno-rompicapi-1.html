@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Puzzle Notebook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f2f6f4;
+    --paper-card:#fffdf6;
+    --grid-line:#c9dadb;
+    --margin-red:#c23b3b;
+    --ink:#1f2b3a;
+    --ink-soft:#5b6b78;
+    --highlight:#f4d35e;
+    --correct-green:#3f7a4f;
+    --correct-bg:#e6f1e8;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background-color:var(--paper);
+    background-image:
+      repeating-linear-gradient(0deg, var(--grid-line) 0 1px, transparent 1px 28px),
+      repeating-linear-gradient(90deg, var(--grid-line) 0 1px, transparent 1px 28px);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    line-height:1.5;
+    min-height:100vh;
+    position:relative;
+    padding-left:0;
+  }
+  .margin-line{
+    position:fixed;
+    top:0;left:64px;
+    width:2px;height:100%;
+    background:var(--margin-red);
+    opacity:.45;
+    z-index:0;
+  }
+  .punch-hole{
+    position:fixed;left:38px;width:14px;height:14px;border-radius:50%;
+    background:var(--paper);
+    box-shadow: inset 0 0 0 2px var(--grid-line);
+    z-index:0;
+  }
+  @media (max-width:700px){ .margin-line,.punch-hole{display:none;} }
+
+  :focus-visible{outline:3px dashed var(--margin-red); outline-offset:2px;}
+
+  .wrap{
+    position:relative;
+    z-index:1;
+    max-width:980px;
+    margin:0 auto;
+    padding:2.5rem 1.5rem 5rem;
+  }
+  @media (min-width:700px){ .wrap{padding-left:5.5rem;} }
+
+  .page-head{
+    margin-bottom:2.5rem;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:1.5rem;
+    flex-wrap:wrap;
+  }
+  .head-text{flex:1; min-width:240px;}
+  .donate-note{
+    background:#fff3b8;
+    padding:1rem 1.2rem;
+    border-radius:2px;
+    transform:rotate(2deg);
+    box-shadow:0 4px 9px rgba(20,30,40,.15);
+    max-width:230px;
+    text-align:center;
+    flex-shrink:0;
+  }
+  .donate-note p{
+    margin:0 0 .6rem;
+    font-family:'Caveat',cursive;
+    font-size:1.15rem;
+    color:var(--ink);
+    line-height:1.15;
+  }
+  .donate-btn{
+    display:inline-block;
+    font-family:'Space Mono',monospace;
+    font-size:.72rem;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    background:var(--margin-red);
+    color:#fff;
+    padding:.55rem .8rem;
+    border-radius:3px;
+    text-decoration:none;
+    transition:transform .15s, box-shadow .15s;
+  }
+  .donate-btn:hover{transform:translateY(-2px); box-shadow:0 5px 11px rgba(0,0,0,.22);}
+  .eyebrow{
+    font-family:'Space Mono',monospace;
+    font-size:.78rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--margin-red);
+    margin:0 0 .4rem;
+  }
+  h1{
+    font-family:'Caveat',cursive;
+    font-weight:700;
+    font-size:clamp(2.6rem,7vw,4.2rem);
+    margin:0 0 .3rem;
+    line-height:1;
+  }
+  .subtitle{
+    color:var(--ink-soft);
+    font-size:1rem;
+    max-width:560px;
+    margin:0;
+  }
+
+  /* index grid */
+  .puzzle-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:1.6rem;
+    margin-top:2.2rem;
+  }
+  @media (min-width:640px){ .puzzle-grid{grid-template-columns:1fr 1fr;} }
+  @media (min-width:980px){ .puzzle-grid{grid-template-columns:1fr 1fr 1fr;} }
+
+  .puzzle-card{
+    position:relative;
+    background:var(--paper-card);
+    border:none;
+    border-radius:3px;
+    padding:1.6rem 1.4rem 1.4rem;
+    text-align:left;
+    font-family:inherit;
+    cursor:pointer;
+    box-shadow:0 4px 10px rgba(20,30,40,.13), 0 1px 2px rgba(20,30,40,.08);
+    transform:rotate(var(--rot,0deg));
+    transition:transform .25s ease, box-shadow .25s ease;
+    overflow:visible;
+  }
+  .puzzle-card:hover, .puzzle-card:focus-visible{
+    transform:rotate(0deg) translateY(-5px);
+    box-shadow:0 10px 18px rgba(20,30,40,.18);
+  }
+  .puzzle-card:nth-child(1){--rot:-1.4deg;}
+  .puzzle-card:nth-child(2){--rot:1.1deg;}
+  .puzzle-card:nth-child(3){--rot:-0.6deg;}
+  .puzzle-card:nth-child(4){--rot:0.9deg;}
+  .puzzle-card:nth-child(5){--rot:-1.1deg;}
+  .puzzle-card:nth-child(6){--rot:1.4deg;}
+
+  .tape{
+    position:absolute; top:-10px; left:50%;
+    width:64px; height:20px;
+    transform:translateX(-50%) rotate(-2deg);
+    background:rgba(244,211,94,.55);
+    border:1px solid rgba(0,0,0,.04);
+  }
+  .card-icon{display:block; width:40px; height:40px; color:var(--ink-soft); margin-bottom:.6rem;}
+  .puzzle-card h3{
+    font-family:'Caveat',cursive;
+    font-size:1.9rem;
+    margin:0 0 .35rem;
+    font-weight:700;
+  }
+  .puzzle-card p{
+    margin:0 0 .7rem;
+    font-size:.92rem;
+    color:var(--ink-soft);
+  }
+  .card-meta{
+    font-family:'Space Mono',monospace;
+    font-size:.74rem;
+    color:var(--margin-red);
+    letter-spacing:.03em;
+  }
+  .circle-scribble{
+    position:absolute; inset:-10px; width:calc(100% + 20px); height:calc(100% + 20px);
+    pointer-events:none;
+  }
+  .circle-scribble path{
+    fill:none; stroke:var(--margin-red); stroke-width:3; stroke-linecap:round;
+    stroke-dasharray:1000; stroke-dashoffset:1000;
+    transition:stroke-dashoffset .6s ease;
+  }
+  .puzzle-card:hover .circle-scribble path,
+  .puzzle-card:focus-visible .circle-scribble path{
+    stroke-dashoffset:0;
+  }
+
+  /* puzzle views */
+  .puzzle-view{display:none;}
+  .view-head{display:flex; align-items:baseline; gap:1rem; flex-wrap:wrap; margin-bottom:.4rem;}
+  .view-head h2{font-family:'Caveat',cursive; font-size:2.4rem; margin:0;}
+  .instructions{color:var(--ink-soft); max-width:600px; margin:.2rem 0 1.4rem;}
+  .status-row{
+    display:flex; flex-wrap:wrap; gap:1rem; align-items:center;
+    font-family:'Space Mono',monospace; font-size:.85rem;
+    margin-bottom:1.4rem;
+  }
+  .status-row strong{color:var(--margin-red);}
+
+  button{font-family:inherit;}
+  .back-btn,.stamp-btn,.ctrl-btn{
+    font-family:'Space Mono',monospace;
+    font-size:.76rem;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    background:transparent;
+    border:2px solid var(--ink);
+    color:var(--ink);
+    padding:.5rem .9rem;
+    border-radius:3px;
+    cursor:pointer;
+    transition:background .15s,color .15s;
+  }
+  .stamp-btn:hover,.ctrl-btn:hover{background:var(--ink); color:var(--paper-card);}
+  .back-btn{border-color:var(--margin-red); color:var(--margin-red); margin-bottom:1rem;}
+  .back-btn:hover{background:var(--margin-red); color:#fff;}
+  .ctrl-row{display:flex; flex-wrap:wrap; gap:.6rem; margin:1rem 0;}
+
+  .win-msg{
+    font-family:'Space Mono',monospace;
+    background:var(--correct-bg); color:var(--correct-green);
+    border:2px solid var(--correct-green);
+    padding:.7rem 1rem; border-radius:4px; max-width:560px;
+  }
+  .status-msg{
+    font-family:'Space Mono',monospace;
+    color:var(--ink-soft);
+    border:2px dashed var(--grid-line);
+    padding:.7rem 1rem; border-radius:4px; max-width:560px;
+  }
+
+  /* memory */
+  .memory-grid{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:.6rem;
+    max-width:460px; margin:0 0 1.2rem;
+  }
+  .memory-card{
+    aspect-ratio:1; font-size:1.7rem; border-radius:6px; border:none;
+    background:var(--ink); color:transparent; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:background .2s,color .2s,transform .15s;
+  }
+  .memory-card:hover:not(.matched){transform:translateY(-2px);}
+  .memory-card.flipped{background:var(--paper-card); color:var(--ink); border:2px solid var(--ink-soft);}
+  .memory-card.matched{background:var(--correct-bg); border:2px solid var(--correct-green); color:var(--correct-green); cursor:default;}
+
+  /* sliding */
+  .slide-grid{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:5px;
+    width:min(90vw,340px); aspect-ratio:1; margin:0 0 1.2rem;
+  }
+  .tile{
+    background:var(--paper-card); border:2px solid var(--ink); border-radius:4px;
+    font-family:'Space Mono',monospace; font-size:1.3rem; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:background .15s;
+  }
+  .tile:hover{background:var(--highlight);}
+  .tile.blank{background:transparent; border:2px dashed var(--grid-line); cursor:default;}
+
+  /* sudoku */
+  .sudoku-grid{
+    display:grid; grid-template-columns:repeat(9,1fr);
+    width:min(94vw,430px); aspect-ratio:1; margin:0 0 1.2rem;
+    border:3px solid var(--ink); background:var(--paper-card);
+  }
+  .sudoku-cell{
+    width:100%; height:100%; text-align:center;
+    font-family:'Space Mono',monospace; font-size:clamp(.85rem,3vw,1.15rem);
+    border:1px solid var(--grid-line); background:transparent; color:var(--ink);
+    display:flex; align-items:center; justify-content:center;
+  }
+  input.sudoku-cell{padding:0;}
+  .sudoku-cell.given{background:#ecefe9; font-weight:700;}
+  .sudoku-cell.correct{background:var(--correct-bg); color:var(--correct-green);}
+  .sudoku-cell.incorrect{background:#fbe8e6; color:var(--margin-red);}
+  .sudoku-cell.border-r{border-right:2.5px solid var(--ink);}
+  .sudoku-cell.border-b{border-bottom:2.5px solid var(--ink);}
+
+  /* hanoi */
+  .hanoi-board{
+    display:flex; justify-content:space-around; align-items:flex-end;
+    height:210px; max-width:480px; margin:0 0 .6rem; padding-bottom:.5rem;
+  }
+  .peg-wrap{display:flex; flex-direction:column; align-items:center; gap:.4rem; flex:1; height:100%;}
+  .peg{
+    position:relative; flex:1; width:100%;
+    display:flex; flex-direction:column-reverse; align-items:center;
+    background:transparent; border:none; cursor:pointer; padding-bottom:6px;
+  }
+  .peg::before{
+    content:''; position:absolute; bottom:6px; width:6px; height:88%;
+    background:var(--ink-soft); border-radius:3px; z-index:0;
+  }
+  .peg.selected::before{background:var(--margin-red);}
+  .peg.selected{outline:2px dashed var(--margin-red); outline-offset:4px;}
+  .disk{
+    height:20px; margin-bottom:4px; border-radius:4px; border:2px solid var(--ink);
+    position:relative; z-index:1;
+    font-family:'Space Mono',monospace; font-size:.7rem;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .peg-label{font-family:'Space Mono',monospace; font-size:.75rem; color:var(--ink-soft);}
+  #hanoi-msg{font-family:'Space Mono',monospace; font-size:.82rem; color:var(--margin-red); min-height:1.2em;}
+
+  /* riddles */
+  .riddle-box{
+    background:var(--paper-card); border:2px solid var(--grid-line); border-radius:4px;
+    padding:1.4rem; max-width:560px; margin-bottom:1rem;
+  }
+  .riddle-box p{margin:0;}
+  #riddle-q{font-size:1.15rem;}
+  .riddle-answer-row{display:flex; gap:.6rem; flex-wrap:wrap; margin-top:1.1rem;}
+  #riddle-input{
+    flex:1; min-width:160px; padding:.6rem .8rem;
+    border:2px solid var(--grid-line); border-radius:4px;
+    font-family:'Inter',sans-serif; font-size:.95rem;
+    background:var(--paper); color:var(--ink);
+  }
+  #riddle-input:focus{border-color:var(--margin-red);}
+  #riddle-feedback{margin-top:.8rem; min-height:1.1em;}
+  #riddle-a{
+    margin-top:.9rem; padding-top:.9rem; border-top:2px dashed var(--grid-line);
+    color:var(--correct-green); font-weight:600;
+  }
+  #riddle-count{font-family:'Space Mono',monospace; font-size:.8rem; color:var(--ink-soft);}
+
+  /* anagram */
+  .ana-pool{display:flex; flex-wrap:wrap; gap:.5rem; justify-content:flex-start; max-width:560px; margin-bottom:1rem;}
+  .letter-tile{
+    width:42px; height:42px; border:2px solid var(--ink); border-radius:4px;
+    background:var(--paper-card); font-family:'Space Mono',monospace; font-size:1.2rem;
+    cursor:pointer; transition:opacity .15s;
+  }
+  .letter-tile.used{opacity:.2; pointer-events:none;}
+  .ana-slots{display:flex; gap:.4rem; margin-bottom:1rem;}
+  .answer-slot{
+    width:42px; height:42px; border-bottom:3px solid var(--margin-red);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Mono',monospace; font-size:1.2rem;
+  }
+  #ana-progress{font-family:'Space Mono',monospace; font-size:.8rem; color:var(--ink-soft); margin-bottom:.6rem;}
+
+  /* victory overlay */
+  .victory-overlay{
+    position:fixed; inset:0; z-index:50;
+    background:rgba(31,43,58,.55);
+    display:flex; align-items:center; justify-content:center;
+    padding:1.5rem;
+  }
+  .victory-overlay[hidden]{display:none;}
+  .victory-card{
+    position:relative;
+    background:var(--paper-card);
+    border-radius:4px;
+    padding:2.4rem 1.8rem 1.8rem;
+    max-width:380px;
+    text-align:center;
+    box-shadow:0 16px 34px rgba(0,0,0,.32);
+  }
+  .victory-stamp{
+    position:absolute; top:-24px; left:50%;
+    transform:translateX(-50%) rotate(-9deg);
+    width:84px; height:84px; border-radius:50%;
+    border:3px solid var(--margin-red);
+    background:var(--paper-card);
+    color:var(--margin-red);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Mono',monospace; font-weight:700;
+    font-size:.62rem; text-transform:uppercase; letter-spacing:.02em;
+    line-height:1.1;
+  }
+  .victory-card h3{font-family:'Caveat',cursive; font-size:2.1rem; margin:1.7rem 0 .6rem;}
+  .victory-card p{color:var(--ink-soft); margin:0 0 1.5rem;}
+  .victory-actions{display:flex; gap:.7rem; justify-content:center; flex-wrap:wrap;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important; animation:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="margin-line"></div>
+<div class="punch-hole" style="top:120px;"></div>
+<div class="punch-hole" style="top:420px;"></div>
+<div class="punch-hole" style="top:720px;"></div>
+
+<div class="wrap">
+
+  <!-- INDEX -->
+  <section id="index-section">
+    <header class="page-head">
+      <div class="head-text">
+        <p class="eyebrow">Notebook No.7 — exercise page</p>
+        <h1>The Puzzle Notebook</h1>
+        <p class="subtitle">Six exercises in logic, memory and words. Pick a page and start solving.</p>
+      </div>
+      <div class="donate-note">
+        <p>Enjoying this notebook?</p>
+        <a class="donate-btn" href="https://www.paypal.me/sidthm" target="_blank" rel="noopener">☕ Buy me a coffee</a>
+        <p style="font-family:'Space Mono',monospace; font-size:.62rem; color:var(--ink-soft); margin:.5rem 0 0; word-break:break-all;">paypal.me/sidthm</p>
+      </div>
+    </header>
+
+    <div class="puzzle-grid">
+
+      <button class="puzzle-card" data-puzzle="view-memory" onclick="showPuzzle('view-memory')">
+        <span class="tape"></span>
+        <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2">
+          <rect x="6" y="10" width="26" height="32" rx="4" transform="rotate(-8 19 26)"/>
+          <rect x="16" y="6" width="26" height="32" rx="4"/>
+        </svg>
+        <h3>Memory</h3>
+        <p>Find the hidden pairs among sixteen face-down cards.</p>
+        <span class="card-meta">★★☆ · 5 minutes</span>
+        <svg class="circle-scribble" viewBox="0 0 300 220"><path d="M22,110 C18,40 90,8 155,10 C235,12 282,55 280,112 C278,170 215,205 150,202 C70,198 26,165 22,110 Z"/></svg>
+      </button>
+
+      <button class="puzzle-card" data-puzzle="view-sliding" onclick="showPuzzle('view-sliding')">
+        <span class="tape"></span>
+        <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2">
+          <rect x="4" y="4" width="12" height="12" rx="2"/><rect x="18" y="4" width="12" height="12" rx="2"/><rect x="32" y="4" width="12" height="12" rx="2"/>
+          <rect x="4" y="18" width="12" height="12" rx="2"/><rect x="18" y="18" width="12" height="12" rx="2"/><rect x="32" y="18" width="12" height="12" rx="2"/>
+          <rect x="4" y="32" width="12" height="12" rx="2"/><rect x="18" y="32" width="12" height="12" rx="2"/>
+        </svg>
+        <h3>Sliding puzzle</h3>
+        <p>Put the numbers back in order by sliding them one at a time.</p>
+        <span class="card-meta">★★☆ · 8 minutes</span>
+        <svg class="circle-scribble" viewBox="0 0 300 220"><path d="M22,110 C18,40 90,8 155,10 C235,12 282,55 280,112 C278,170 215,205 150,202 C70,198 26,165 22,110 Z"/></svg>
+      </button>
+
+      <button class="puzzle-card" data-puzzle="view-sudoku" onclick="showPuzzle('view-sudoku')">
+        <span class="tape"></span>
+        <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2">
+          <rect x="4" y="4" width="40" height="40" rx="3"/>
+          <line x1="17.3" y1="4" x2="17.3" y2="44"/><line x1="30.6" y1="4" x2="30.6" y2="44"/>
+          <line x1="4" y1="17.3" x2="44" y2="17.3"/><line x1="4" y1="30.6" x2="44" y2="30.6"/>
+        </svg>
+        <h3>Sudoku</h3>
+        <p>Fill the 9×9 grid without repeating digits in rows, columns or blocks.</p>
+        <span class="card-meta">★★★ · 15 minutes</span>
+        <svg class="circle-scribble" viewBox="0 0 300 220"><path d="M22,110 C18,40 90,8 155,10 C235,12 282,55 280,112 C278,170 215,205 150,202 C70,198 26,165 22,110 Z"/></svg>
+      </button>
+
+      <button class="puzzle-card" data-puzzle="view-hanoi" onclick="showPuzzle('view-hanoi')">
+        <span class="tape"></span>
+        <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="4" y1="40" x2="44" y2="40"/>
+          <line x1="10" y1="10" x2="10" y2="40"/><line x1="24" y1="16" x2="24" y2="40"/><line x1="38" y1="16" x2="38" y2="40"/>
+          <rect x="3" y="30" width="14" height="6" rx="1"/><rect x="5" y="22" width="10" height="6" rx="1"/><rect x="6.5" y="14" width="7" height="6" rx="1"/>
+        </svg>
+        <h3>Tower of Hanoi</h3>
+        <p>Move the disks from one peg to another in the fewest moves.</p>
+        <span class="card-meta">★★★ · 10 minutes</span>
+        <svg class="circle-scribble" viewBox="0 0 300 220"><path d="M22,110 C18,40 90,8 155,10 C235,12 282,55 280,112 C278,170 215,205 150,202 C70,198 26,165 22,110 Z"/></svg>
+      </button>
+
+      <button class="puzzle-card" data-puzzle="view-riddles" onclick="showPuzzle('view-riddles')">
+        <span class="tape"></span>
+        <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M6 10h36v22H20l-8 8v-8H6z" stroke-linejoin="round"/>
+          <text x="19" y="27" font-size="15" stroke="none" fill="currentColor" font-family="Space Mono, monospace">?</text>
+        </svg>
+        <h3>Riddles</h3>
+        <p>Ten classic riddles to solve one at a time.</p>
+        <span class="card-meta">★☆☆ · 5 minutes</span>
+        <svg class="circle-scribble" viewBox="0 0 300 220"><path d="M22,110 C18,40 90,8 155,10 C235,12 282,55 280,112 C278,170 215,205 150,202 C70,198 26,165 22,110 Z"/></svg>
+      </button>
+
+      <button class="puzzle-card" data-puzzle="view-anagram" onclick="showPuzzle('view-anagram')">
+        <span class="tape"></span>
+        <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="4" y="14" width="13" height="13" rx="2" transform="rotate(-6 10 20)"/>
+          <rect x="18" y="20" width="13" height="13" rx="2" transform="rotate(5 24 26)"/>
+          <rect x="32" y="12" width="13" height="13" rx="2" transform="rotate(-4 38 18)"/>
+        </svg>
+        <h3>Anagrams</h3>
+        <p>Unscramble the words hidden among jumbled letters.</p>
+        <span class="card-meta">★★☆ · 8 minutes</span>
+        <svg class="circle-scribble" viewBox="0 0 300 220"><path d="M22,110 C18,40 90,8 155,10 C235,12 282,55 280,112 C278,170 215,205 150,202 C70,198 26,165 22,110 Z"/></svg>
+      </button>
+
+    </div>
+  </section>
+
+  <!-- MEMORY -->
+  <section id="view-memory" class="puzzle-view">
+    <button class="back-btn" onclick="showIndex()">← Back to the notebook</button>
+    <div class="view-head"><h2>Memory</h2></div>
+    <p class="instructions">Flip two cards at a time. If the symbols match, they'll stay face up. Find all eight pairs.</p>
+    <div class="status-row">
+      <span>Attempts: <strong id="mem-moves">0</strong></span>
+      <span>Time: <strong id="mem-timer">00:00</strong></span>
+      <button class="stamp-btn" onclick="initMemory()">↻ New game</button>
+    </div>
+    <div id="memory-grid" class="memory-grid"></div>
+  </section>
+
+  <!-- SLIDING -->
+  <section id="view-sliding" class="puzzle-view">
+    <button class="back-btn" onclick="showIndex()">← Back to the notebook</button>
+    <div class="view-head"><h2>Sliding puzzle</h2></div>
+    <p class="instructions">Click a tile next to the empty space to move it. Arrange the numbers from 1 to 15.</p>
+    <div class="status-row">
+      <span>Moves: <strong id="slide-moves">0</strong></span>
+      <button class="stamp-btn" onclick="initSliding()">↻ Shuffle</button>
+    </div>
+    <div id="slide-grid" class="slide-grid"></div>
+  </section>
+
+  <!-- SUDOKU -->
+  <section id="view-sudoku" class="puzzle-view">
+    <button class="back-btn" onclick="showIndex()">← Back to the notebook</button>
+    <div class="view-head"><h2>Sudoku</h2></div>
+    <p class="instructions">Fill the grid with digits 1 to 9: no repeats in any row, column or 3×3 block.</p>
+    <div id="sudoku-grid" class="sudoku-grid"></div>
+    <div class="ctrl-row">
+      <button class="ctrl-btn" onclick="checkSudoku()">Check</button>
+      <button class="ctrl-btn" onclick="revealSudoku()">Show solution</button>
+      <button class="stamp-btn" onclick="initSudoku()">↻ New sudoku</button>
+    </div>
+    <p id="sudoku-result" hidden></p>
+  </section>
+
+  <!-- HANOI -->
+  <section id="view-hanoi" class="puzzle-view">
+    <button class="back-btn" onclick="showIndex()">← Back to the notebook</button>
+    <div class="view-head"><h2>Tower of Hanoi</h2></div>
+    <p class="instructions">Click a peg to pick up its top disk, then click another peg to move it there. You can't place a larger disk on top of a smaller one.</p>
+    <div class="status-row">
+      <span>Moves: <strong id="hanoi-moves">0</strong></span>
+      <span>Minimum: <strong id="hanoi-min">15</strong></span>
+      <button class="stamp-btn" onclick="initHanoi(hanoiState.n)">↻ Restart</button>
+    </div>
+    <div class="ctrl-row">
+      <span style="font-family:'Space Mono',monospace; font-size:.8rem; color:var(--ink-soft); align-self:center;">Number of disks:</span>
+      <button class="ctrl-btn" onclick="initHanoi(3)">3</button>
+      <button class="ctrl-btn" onclick="initHanoi(4)">4</button>
+      <button class="ctrl-btn" onclick="initHanoi(5)">5</button>
+      <button class="ctrl-btn" onclick="initHanoi(6)">6</button>
+    </div>
+    <div id="hanoi-board" class="hanoi-board"></div>
+    <p id="hanoi-msg"></p>
+  </section>
+
+  <!-- RIDDLES -->
+  <section id="view-riddles" class="puzzle-view">
+    <button class="back-btn" onclick="showIndex()">← Back to the notebook</button>
+    <div class="view-head"><h2>Riddles</h2></div>
+    <p class="instructions">Read the riddle, write your answer and check it. The check is flexible: just give the key idea. If you're stuck, you can reveal the solution.</p>
+    <p id="riddle-count"></p>
+    <div class="riddle-box">
+      <p id="riddle-q"></p>
+      <div class="riddle-answer-row">
+        <input type="text" id="riddle-input" placeholder="Write your answer here…" autocomplete="off" onkeydown="if(event.key==='Enter'){checkRiddleAnswer();}">
+        <button class="ctrl-btn" onclick="checkRiddleAnswer()">Check answer</button>
+      </div>
+      <p id="riddle-feedback"></p>
+      <p id="riddle-a" hidden></p>
+    </div>
+    <div class="ctrl-row">
+      <button class="ctrl-btn" id="riddle-toggle" onclick="toggleRiddle()">Show solution</button>
+      <button class="stamp-btn" onclick="nextRiddle()">Next riddle →</button>
+    </div>
+  </section>
+
+  <!-- ANAGRAM -->
+  <section id="view-anagram" class="puzzle-view">
+    <button class="back-btn" onclick="showIndex()">← Back to the notebook</button>
+    <div class="view-head"><h2>Anagrams</h2></div>
+    <p class="instructions">Click the letters in the right order to spell the word. Theme: puzzle-related words.</p>
+    <p id="ana-progress"></p>
+    <div id="ana-slots" class="ana-slots"></div>
+    <div id="ana-pool" class="ana-pool"></div>
+    <div class="ctrl-row">
+      <button class="ctrl-btn" onclick="removeLastAnagramLetter()">⌫ Remove last</button>
+      <button class="ctrl-btn" onclick="clearAnagramAnswer()">✕ Restart word</button>
+      <button class="stamp-btn" onclick="checkAnagram()">Check</button>
+      <button class="stamp-btn" onclick="nextAnagram()">Next word →</button>
+    </div>
+    <p id="ana-feedback"></p>
+    <p style="font-family:'Space Mono',monospace; font-size:.8rem; color:var(--ink-soft);">Words solved: <strong id="ana-score" style="color:var(--margin-red);">0</strong></p>
+  </section>
+
+</div>
+
+<div id="victory-overlay" class="victory-overlay" hidden>
+  <div class="victory-card">
+    <div class="victory-stamp">SOLVED!</div>
+    <h3 id="victory-title">You won!</h3>
+    <p id="victory-detail"></p>
+    <div class="victory-actions">
+      <button class="stamp-btn" id="victory-replay">↻ Play again</button>
+      <button class="ctrl-btn" id="victory-close">Back to the notebook</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- utilities ---------- */
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    const t=arr[i]; arr[i]=arr[j]; arr[j]=t;
+  }
+  return arr;
+}
+function prefersReducedMotion(){
+  return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+function scrollToTop(){
+  window.scrollTo({top:0, behavior: prefersReducedMotion() ? 'auto' : 'smooth'});
+}
+function normalizeText(str){
+  return str.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9\s]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+/* ---------- victory overlay ---------- */
+function showVictory(title, detail, replayFn){
+  document.getElementById('victory-title').textContent=title;
+  document.getElementById('victory-detail').textContent=detail;
+  const replayBtn=document.getElementById('victory-replay');
+  replayBtn.onclick=function(){ closeVictory(); if(replayFn) replayFn(); };
+  document.getElementById('victory-overlay').hidden=false;
+}
+function closeVictory(){
+  document.getElementById('victory-overlay').hidden=true;
+}
+document.getElementById('victory-close').addEventListener('click', function(){
+  closeVictory();
+  showIndex();
+});
+document.getElementById('victory-overlay').addEventListener('click', function(e){
+  if(e.target===this) closeVictory();
+});
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape' && !document.getElementById('victory-overlay').hidden) closeVictory();
+});
+
+/* ---------- navigation ---------- */
+const initFns={
+  'view-memory': initMemory,
+  'view-sliding': initSliding,
+  'view-sudoku': initSudoku,
+  'view-hanoi': function(){ initHanoi(4); },
+  'view-riddles': initRiddles,
+  'view-anagram': initAnagram
+};
+function showPuzzle(id){
+  document.getElementById('index-section').style.display='none';
+  document.querySelectorAll('.puzzle-view').forEach(function(v){ v.style.display='none'; });
+  const el=document.getElementById(id);
+  el.style.display='block';
+  if(initFns[id]) initFns[id]();
+  scrollToTop();
+}
+function showIndex(){
+  document.getElementById('index-section').style.display='block';
+  document.querySelectorAll('.puzzle-view').forEach(function(v){ v.style.display='none'; });
+  scrollToTop();
+}
+
+/* ---------- MEMORY ---------- */
+let memState={first:null,second:null,lock:false,moves:0,matches:0,timer:null,seconds:0,deck:[]};
+function initMemory(){
+  clearInterval(memState.timer);
+  const symbols=['🧩','🔑','🎲','♟️','🔮','🪄','🎯','🧠'];
+  const deck=shuffle(symbols.concat(symbols)).map(function(s,i){
+    return {id:i, symbol:s, flipped:false, matched:false};
+  });
+  memState={first:null,second:null,lock:false,moves:0,matches:0,timer:null,seconds:0,deck:deck};
+  document.getElementById('mem-moves').textContent='0';
+  document.getElementById('mem-timer').textContent='00:00';
+  renderMemory();
+  memState.timer=setInterval(function(){
+    memState.seconds++;
+    const m=String(Math.floor(memState.seconds/60)).padStart(2,'0');
+    const s=String(memState.seconds%60).padStart(2,'0');
+    document.getElementById('mem-timer').textContent=m+':'+s;
+  },1000);
+}
+function renderMemory(){
+  const grid=document.getElementById('memory-grid');
+  grid.innerHTML='';
+  memState.deck.forEach(function(card){
+    const btn=document.createElement('button');
+    btn.className='memory-card'+((card.flipped||card.matched)?' flipped':'')+(card.matched?' matched':'');
+    btn.textContent=(card.flipped||card.matched)? card.symbol : '?';
+    btn.disabled=card.matched;
+    btn.setAttribute('aria-label', card.matched?'Matched card':'Face-down card');
+    btn.addEventListener('click', function(){ flipMemoryCard(card.id); });
+    grid.appendChild(btn);
+  });
+}
+function flipMemoryCard(id){
+  if(memState.lock) return;
+  const card=memState.deck.find(function(c){ return c.id===id; });
+  if(card.flipped||card.matched) return;
+  card.flipped=true;
+  if(memState.first==null){
+    memState.first=id;
+    renderMemory();
+    return;
+  }
+  memState.second=id;
+  memState.lock=true;
+  memState.moves++;
+  document.getElementById('mem-moves').textContent=memState.moves;
+  const c1=memState.deck.find(function(c){ return c.id===memState.first; });
+  const c2=card;
+  renderMemory();
+  if(c1.symbol===c2.symbol){
+    c1.matched=true; c2.matched=true;
+    memState.matches++;
+    memState.first=null; memState.second=null; memState.lock=false;
+    renderMemory();
+    if(memState.matches===8){
+      clearInterval(memState.timer);
+      const tempo=document.getElementById('mem-timer').textContent;
+      showVictory('All pairs found!', 'In '+memState.moves+' attempts and '+tempo+'.', initMemory);
+    }
+  } else {
+    setTimeout(function(){
+      c1.flipped=false; c2.flipped=false;
+      memState.first=null; memState.second=null; memState.lock=false;
+      renderMemory();
+    }, 800);
+  }
+}
+
+/* ---------- SLIDING PUZZLE ---------- */
+let slideState={tiles:[],moves:0};
+function getSlideNeighbors(pos){
+  const r=Math.floor(pos/4), c=pos%4;
+  const res=[];
+  if(r>0) res.push(pos-4);
+  if(r<3) res.push(pos+4);
+  if(c>0) res.push(pos-1);
+  if(c<3) res.push(pos+1);
+  return res;
+}
+function initSliding(){
+  let tiles=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0];
+  let blank=15;
+  for(let i=0;i<300;i++){
+    const neighbors=getSlideNeighbors(blank);
+    const n=neighbors[Math.floor(Math.random()*neighbors.length)];
+    const t=tiles[blank]; tiles[blank]=tiles[n]; tiles[n]=t;
+    blank=n;
+  }
+  slideState={tiles:tiles,moves:0};
+  document.getElementById('slide-moves').textContent='0';
+  renderSlide();
+}
+function renderSlide(){
+  const grid=document.getElementById('slide-grid');
+  grid.innerHTML='';
+  slideState.tiles.forEach(function(val,idx){
+    const btn=document.createElement('button');
+    btn.className='tile'+(val===0?' blank':'');
+    btn.textContent=val===0?'':val;
+    if(val!==0){
+      btn.addEventListener('click', function(){ moveSlideTile(idx); });
+    } else {
+      btn.disabled=true;
+      btn.setAttribute('aria-hidden','true');
+    }
+    grid.appendChild(btn);
+  });
+}
+function moveSlideTile(idx){
+  const blank=slideState.tiles.indexOf(0);
+  const neighbors=getSlideNeighbors(blank);
+  if(neighbors.indexOf(idx)===-1) return;
+  const t=slideState.tiles[blank]; slideState.tiles[blank]=slideState.tiles[idx]; slideState.tiles[idx]=t;
+  slideState.moves++;
+  document.getElementById('slide-moves').textContent=slideState.moves;
+  renderSlide();
+  const solved=slideState.tiles.every(function(v,i){ return i===15 ? v===0 : v===i+1; });
+  if(solved){
+    showVictory('Puzzle solved!', 'You did it in '+slideState.moves+' moves.', initSliding);
+  }
+}
+
+/* ---------- SUDOKU ---------- */
+let sudokuState={solved:null,puzzle:null};
+function emptyBoard(){ return Array.from({length:9}, function(){ return Array(9).fill(0); }); }
+function isValidSudoku(board,r,c,val){
+  for(let i=0;i<9;i++){
+    if(board[r][i]===val) return false;
+    if(board[i][c]===val) return false;
+  }
+  const br=Math.floor(r/3)*3, bc=Math.floor(c/3)*3;
+  for(let i=0;i<3;i++){
+    for(let j=0;j<3;j++){
+      if(board[br+i][bc+j]===val) return false;
+    }
+  }
+  return true;
+}
+function fillSudoku(board,pos){
+  pos=pos||0;
+  if(pos===81) return true;
+  const r=Math.floor(pos/9), c=pos%9;
+  const nums=shuffle([1,2,3,4,5,6,7,8,9]);
+  for(let k=0;k<nums.length;k++){
+    const n=nums[k];
+    if(isValidSudoku(board,r,c,n)){
+      board[r][c]=n;
+      if(fillSudoku(board,pos+1)) return true;
+      board[r][c]=0;
+    }
+  }
+  return false;
+}
+function generateSudoku(cluesToKeep){
+  const solved=emptyBoard();
+  fillSudoku(solved,0);
+  const puzzle=solved.map(function(row){ return row.slice(); });
+  const cellsToRemove=81-cluesToKeep;
+  const positions=shuffle(Array.from({length:81}, function(_,i){ return i; }));
+  let removed=0;
+  for(let i=0;i<positions.length && removed<cellsToRemove;i++){
+    const pos=positions[i];
+    const r=Math.floor(pos/9), c=pos%9;
+    puzzle[r][c]=0;
+    removed++;
+  }
+  return {solved:solved, puzzle:puzzle};
+}
+function initSudoku(){
+  const gen=generateSudoku(34);
+  sudokuState={solved:gen.solved, puzzle:gen.puzzle};
+  const grid=document.getElementById('sudoku-grid');
+  grid.innerHTML='';
+  for(let r=0;r<9;r++){
+    for(let c=0;c<9;c++){
+      const val=sudokuState.puzzle[r][c];
+      let cell;
+      if(val){
+        cell=document.createElement('div');
+        cell.className='sudoku-cell given';
+        cell.textContent=val;
+      } else {
+        cell=document.createElement('input');
+        cell.className='sudoku-cell';
+        cell.type='text';
+        cell.inputMode='numeric';
+        cell.maxLength=1;
+        cell.dataset.r=r;
+        cell.dataset.c=c;
+        cell.addEventListener('input', function(e){
+          e.target.value=e.target.value.replace(/[^1-9]/g,'').slice(0,1);
+          e.target.classList.remove('correct','incorrect');
+        });
+      }
+      if((c+1)%3===0 && c!==8) cell.classList.add('border-r');
+      if((r+1)%3===0 && r!==8) cell.classList.add('border-b');
+      grid.appendChild(cell);
+    }
+  }
+  document.getElementById('sudoku-result').hidden=true;
+}
+function checkSudoku(){
+  const inputs=document.querySelectorAll('#sudoku-grid input.sudoku-cell');
+  let filled=0, correct=0;
+  inputs.forEach(function(inp){
+    const r=+inp.dataset.r, c=+inp.dataset.c;
+    const v=inp.value ? +inp.value : 0;
+    inp.classList.remove('correct','incorrect');
+    if(v){
+      filled++;
+      if(v===sudokuState.solved[r][c]){ inp.classList.add('correct'); correct++; }
+      else inp.classList.add('incorrect');
+    }
+  });
+  const result=document.getElementById('sudoku-result');
+  result.hidden=false;
+  if(correct===inputs.length){
+    result.className='win-msg';
+    result.textContent='Congratulations, you solved the sudoku! 🎉';
+    showVictory('Sudoku completed!', 'You correctly filled all 81 cells.', initSudoku);
+  } else {
+    result.className='status-msg';
+    result.textContent='You filled in '+filled+' cells: '+correct+' correct, '+(filled-correct)+' to review.';
+  }
+}
+function revealSudoku(){
+  const inputs=document.querySelectorAll('#sudoku-grid input.sudoku-cell');
+  inputs.forEach(function(inp){
+    const r=+inp.dataset.r, c=+inp.dataset.c;
+    inp.value=sudokuState.solved[r][c];
+    inp.disabled=true;
+    inp.classList.add('correct');
+    inp.classList.remove('incorrect');
+  });
+  const result=document.getElementById('sudoku-result');
+  result.hidden=false;
+  result.className='status-msg';
+  result.textContent='Here is the full solution.';
+}
+
+/* ---------- HANOI ---------- */
+let hanoiState={pegs:[[],[],[]],n:4,moves:0,selected:null};
+function initHanoi(n){
+  n=n||4;
+  const peg0=[];
+  for(let i=0;i<n;i++) peg0.push(n-i);
+  hanoiState={pegs:[peg0,[],[]], n:n, moves:0, selected:null};
+  document.getElementById('hanoi-moves').textContent='0';
+  document.getElementById('hanoi-min').textContent=Math.pow(2,n)-1;
+  document.getElementById('hanoi-msg').textContent='';
+  renderHanoi();
+}
+function renderHanoi(){
+  const board=document.getElementById('hanoi-board');
+  board.innerHTML='';
+  hanoiState.pegs.forEach(function(peg,pIdx){
+    const wrap=document.createElement('div');
+    wrap.className='peg-wrap';
+    const btn=document.createElement('button');
+    btn.className='peg'+(hanoiState.selected===pIdx?' selected':'');
+    btn.setAttribute('aria-label','Peg '+['A','B','C'][pIdx]);
+    peg.forEach(function(size){
+      const disk=document.createElement('div');
+      disk.className='disk';
+      disk.style.width=(28+size*20)+'px';
+      disk.style.background='hsl('+(20+size*28)+',62%,68%)';
+      disk.textContent=size;
+      btn.appendChild(disk);
+    });
+    btn.addEventListener('click', function(){ hanoiClick(pIdx); });
+    const label=document.createElement('span');
+    label.className='peg-label';
+    label.textContent=['A','B','C'][pIdx];
+    wrap.appendChild(btn);
+    wrap.appendChild(label);
+    board.appendChild(wrap);
+  });
+}
+function hanoiClick(pIdx){
+  const msg=document.getElementById('hanoi-msg');
+  msg.textContent='';
+  if(hanoiState.selected===null){
+    if(hanoiState.pegs[pIdx].length===0){
+      msg.textContent='This peg is empty.';
+      return;
+    }
+    hanoiState.selected=pIdx;
+  } else if(hanoiState.selected===pIdx){
+    hanoiState.selected=null;
+  } else {
+    const from=hanoiState.selected, to=pIdx;
+    const fromPeg=hanoiState.pegs[from], toPeg=hanoiState.pegs[to];
+    const disk=fromPeg[fromPeg.length-1];
+    const topTo=toPeg.length ? toPeg[toPeg.length-1] : Infinity;
+    if(disk<topTo){
+      fromPeg.pop();
+      toPeg.push(disk);
+      hanoiState.moves++;
+      document.getElementById('hanoi-moves').textContent=hanoiState.moves;
+    } else {
+      msg.textContent='Invalid move: a larger disk can\'t go on top of a smaller one.';
+    }
+    hanoiState.selected=null;
+  }
+  renderHanoi();
+  if(hanoiState.pegs[2].length===hanoiState.n){
+    const min=Math.pow(2,hanoiState.n)-1;
+    const n=hanoiState.n;
+    showVictory('Tower completed!', 'Solved in '+hanoiState.moves+' moves (minimum possible: '+min+').', function(){ initHanoi(n); });
+  }
+}
+
+/* ---------- RIDDLES ---------- */
+const riddles=[
+  {
+    q:"A man lives on the fifteenth floor. Every morning he rides the elevator straight down to the ground floor with no trouble at all. When he comes home, if it's raining he rides the elevator all the way up to his floor; but if it's sunny, he only goes up to the seventh floor and walks the rest of the way. Why?",
+    a:"He's a person of short stature: without an umbrella he can't reach the button for the fifteenth floor.",
+    accept:["short","dwarf","stature","small","umbrella","reach the button","height"]
+  },
+  {
+    q:"You're in a completely dark room with a candle, an oil lamp and a gas lantern. You have only one match. What do you light first?",
+    a:"The match itself.",
+    accept:["match"]
+  },
+  {
+    q:"Two fathers and two sons go fishing together, yet there are only three people in total. How is that possible?",
+    a:"They're a grandfather, a father and a son: the man in the middle is both a father and a son.",
+    accept:["grandfather","three generations","father and son"]
+  },
+  {
+    q:"If the day before yesterday was Wednesday, what day will tomorrow be?",
+    a:"Saturday.",
+    accept:["saturday"]
+  },
+  {
+    q:"How many months of the year have at least 28 days?",
+    a:"All twelve, because every month has at least 28 days.",
+    accept:["all","12","twelve"]
+  },
+  {
+    q:"A farmer must cross a river by boat, but can only take one of a wolf, a goat and a cabbage with him at a time. If he leaves the wolf alone with the goat, the wolf eats it; if he leaves the goat alone with the cabbage, the goat eats it. Which of the three should he take across on the first trip, so that nothing gets lost?",
+    a:"The goat: it's the only choice that doesn't leave anything at risk on the riverbank.",
+    accept:["goat"]
+  },
+  {
+    q:"I'm a two-digit number. My tens digit is three times my units digit, and the sum of my two digits is 8. What number am I?",
+    a:"62 (tens digit 6, units digit 2: 6 is three times 2, and 6+2=8).",
+    accept:["62"]
+  },
+  {
+    q:"I have a twin brother, but he has no brothers at all. How is that possible?",
+    a:"The speaker is female: she has a twin sister, not a brother.",
+    accept:["sister","female","twin sister"]
+  },
+  {
+    q:"The more I'm used to dry things, the wetter I get. What am I?",
+    a:"A towel (or a cloth).",
+    accept:["towel","cloth","rag"]
+  },
+  {
+    q:"Three friends split a $30 restaurant bill, paying $10 each. The waiter realizes the bill was actually $25 and sends the busboy to return $5. The busboy, however, pockets $2 and gives back only $1 to each of the three friends. Now each friend has paid $9, for a total of $27, plus the $2 the busboy pocketed makes $29. Where did the missing dollar go, compared to the original $30?",
+    a:"Nowhere: no dollar is actually missing. The correct total is $27 paid plus $3 returned ($2 to the busboy, $1 to the customers) = $30; the mistake is adding 27 and 2 instead of treating them as part of the same figure.",
+    accept:["nothing is missing","no dollar is missing","nothing missing","math error","no money is missing"]
+  }
+];
+let riddleState={order:[],idx:0,revealed:false,answered:false,correctCount:0};
+function initRiddles(){
+  riddleState.order=shuffle(riddles.map(function(_,i){ return i; }));
+  riddleState.idx=0;
+  riddleState.revealed=false;
+  riddleState.answered=false;
+  riddleState.correctCount=0;
+  document.getElementById('riddle-input').value='';
+  document.getElementById('riddle-feedback').textContent='';
+  document.getElementById('riddle-feedback').className='';
+  renderRiddle();
+}
+function renderRiddle(){
+  const r=riddles[riddleState.order[riddleState.idx]];
+  document.getElementById('riddle-q').textContent=r.q;
+  const aEl=document.getElementById('riddle-a');
+  aEl.textContent='Answer: '+r.a;
+  aEl.hidden=!riddleState.revealed;
+  document.getElementById('riddle-count').textContent=(riddleState.idx+1)+' / '+riddles.length;
+  document.getElementById('riddle-toggle').textContent=riddleState.revealed?'Hide solution':'Show solution';
+}
+function toggleRiddle(){
+  riddleState.revealed=!riddleState.revealed;
+  renderRiddle();
+}
+function checkRiddleAnswer(){
+  const raw=document.getElementById('riddle-input').value;
+  const norm=normalizeText(raw);
+  const fb=document.getElementById('riddle-feedback');
+  if(!norm){
+    fb.className='status-msg';
+    fb.textContent='Write an answer before checking.';
+    return;
+  }
+  const r=riddles[riddleState.order[riddleState.idx]];
+  const isCorrect=r.accept.some(function(k){
+    const nk=normalizeText(k);
+    return norm===nk || norm.indexOf(nk)!==-1 || nk.indexOf(norm)!==-1;
+  });
+  if(isCorrect){
+    if(!riddleState.answered){ riddleState.correctCount++; riddleState.answered=true; }
+    fb.className='win-msg';
+    fb.textContent='Correct! 🎉';
+  } else {
+    fb.className='status-msg';
+    fb.textContent='Not quite. Try again or reveal the solution.';
+  }
+}
+function nextRiddle(){
+  riddleState.idx++;
+  if(riddleState.idx>=riddles.length){
+    const score=riddleState.correctCount;
+    showVictory('Riddles completed!', 'You solved '+score+' out of '+riddles.length+'.', initRiddles);
+    return;
+  }
+  riddleState.revealed=false;
+  riddleState.answered=false;
+  document.getElementById('riddle-input').value='';
+  document.getElementById('riddle-feedback').textContent='';
+  document.getElementById('riddle-feedback').className='';
+  renderRiddle();
+}
+
+/* ---------- ANAGRAM ---------- */
+const anagramWords=['PUZZLE','RIDDLE','LOGIC','MYSTERY','SOLUTION','LABYRINTH','PADLOCK','CROSSWORD','CHESS','COMPASS'];
+let anagramState={order:[],idx:0,word:'',letters:[],answer:[],score:0};
+function initAnagram(){
+  anagramState.order=shuffle(anagramWords.map(function(_,i){ return i; }));
+  anagramState.idx=0;
+  anagramState.score=0;
+  document.getElementById('ana-score').textContent='0';
+  startAnagramRound();
+}
+function startAnagramRound(){
+  const word=anagramWords[anagramState.order[anagramState.idx]];
+  let letters=word.split('').map(function(ch,i){ return {ch:ch,id:i,used:false}; });
+  let tries=0;
+  do{
+    letters=shuffle(letters.slice());
+    tries++;
+  } while(letters.map(function(l){ return l.ch; }).join('')===word && tries<10);
+  anagramState.word=word;
+  anagramState.letters=letters;
+  anagramState.answer=[];
+  document.getElementById('ana-feedback').textContent='';
+  document.getElementById('ana-progress').textContent='Word '+(anagramState.idx+1)+' / '+anagramWords.length+' · '+word.length+' letters';
+  renderAnagram();
+}
+function renderAnagram(){
+  const pool=document.getElementById('ana-pool');
+  pool.innerHTML='';
+  anagramState.letters.forEach(function(l){
+    const btn=document.createElement('button');
+    btn.className='letter-tile'+(l.used?' used':'');
+    btn.textContent=l.ch;
+    btn.disabled=l.used;
+    btn.addEventListener('click', function(){ pickAnagramLetter(l.id); });
+    pool.appendChild(btn);
+  });
+  const slots=document.getElementById('ana-slots');
+  slots.innerHTML='';
+  for(let i=0;i<anagramState.word.length;i++){
+    const slot=document.createElement('div');
+    slot.className='answer-slot';
+    slot.textContent=anagramState.answer[i] ? anagramState.answer[i].ch : '';
+    slots.appendChild(slot);
+  }
+}
+function pickAnagramLetter(id){
+  if(anagramState.answer.length>=anagramState.word.length) return;
+  const letter=anagramState.letters.find(function(l){ return l.id===id; });
+  if(letter.used) return;
+  letter.used=true;
+  anagramState.answer.push(letter);
+  renderAnagram();
+}
+function removeLastAnagramLetter(){
+  const last=anagramState.answer.pop();
+  if(last){
+    const letter=anagramState.letters.find(function(l){ return l.id===last.id; });
+    letter.used=false;
+  }
+  renderAnagram();
+}
+function clearAnagramAnswer(){
+  anagramState.letters.forEach(function(l){ l.used=false; });
+  anagramState.answer=[];
+  document.getElementById('ana-feedback').textContent='';
+  renderAnagram();
+}
+function checkAnagram(){
+  const built=anagramState.answer.map(function(l){ return l.ch; }).join('');
+  const fb=document.getElementById('ana-feedback');
+  if(built.length<anagramState.word.length){
+    fb.className='status-msg';
+    fb.textContent='Fill in all the boxes before checking.';
+    return;
+  }
+  if(built===anagramState.word){
+    anagramState.score++;
+    document.getElementById('ana-score').textContent=anagramState.score;
+    fb.className='win-msg';
+    fb.textContent='Correct! 🎉';
+  } else {
+    fb.className='status-msg';
+    fb.textContent='Not correct, try again.';
+  }
+}
+function nextAnagram(){
+  anagramState.idx++;
+  if(anagramState.idx>=anagramWords.length){
+    const score=anagramState.score;
+    showVictory('Anagrams completed!', 'You solved '+score+' words out of '+anagramWords.length+'.', initAnagram);
+    return;
+  }
+  startAnagramRound();
+}
+</script>
+</body>
+</html>
